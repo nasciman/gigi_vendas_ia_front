@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -21,6 +21,22 @@ import { Colors } from '../../constants/Colors';
 import { Endpoints } from '../../constants/Api';
 import api from '../../services/api';
 
+const API_BASE = 'http://192.168.1.100:8080';
+
+interface ProductDetail {
+  barcode: string;
+  name: string;
+  photoPath: string | null;
+  salePrice: number;
+  lastPurchasePrice: number | null;
+}
+
+function resolvePhotoUrl(photoPath: string | null): string | null {
+  if (!photoPath) return null;
+  if (photoPath.startsWith('http')) return photoPath;
+  return `${API_BASE}${photoPath.startsWith('/') ? '' : '/'}${photoPath}`;
+}
+
 export default function ProductFormScreen() {
   const router = useRouter();
   const { barcode } = useLocalSearchParams<{ barcode: string }>();
@@ -31,10 +47,38 @@ export default function ProductFormScreen() {
   const [salePrice, setSalePrice] = useState(0);
   const [purchasePrice, setPurchasePrice] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [loadingProduct, setLoadingProduct] = useState(true);
 
   const [cameraVisible, setCameraVisible] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
+
+  useEffect(() => {
+    if (!barcode) {
+      setLoadingProduct(false);
+      return;
+    }
+
+    const loadProduct = async () => {
+      try {
+        const response = await api.get<ProductDetail>(
+          Endpoints.productByBarcode(barcode),
+        );
+        const product = response.data;
+        setName(product.name);
+        setSalePrice(product.salePrice);
+        setPhotoUri(resolvePhotoUrl(product.photoPath));
+        setIsEditing(true);
+      } catch {
+        // 404 or error — product doesn't exist, keep form empty for new registration
+      } finally {
+        setLoadingProduct(false);
+      }
+    };
+
+    loadProduct();
+  }, [barcode]);
 
   const handlePricingChange = useCallback(
     (cost: number, _margin: number, sale: number) => {
@@ -128,6 +172,15 @@ export default function ProductFormScreen() {
     }
   };
 
+  if (loadingProduct) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors.accent} />
+        <Text style={styles.loadingText}>A carregar...</Text>
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -175,7 +228,11 @@ export default function ProductFormScreen() {
         />
 
         {/* Pricing Calculator */}
-        <PricingCalculator mode="new" onPricingChange={handlePricingChange} />
+        <PricingCalculator
+          mode="new"
+          initialSalePrice={isEditing ? salePrice : undefined}
+          onPricingChange={handlePricingChange}
+        />
 
         {/* Save Button */}
         <TouchableOpacity
@@ -231,6 +288,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: Colors.textSecondary,
   },
   scrollContent: {
     padding: 20,

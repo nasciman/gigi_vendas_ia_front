@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
   Modal,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -127,35 +127,37 @@ export default function SearchableDropdown({
               color={Colors.accent}
             />
           ) : (
-            <FlatList
-              data={filtered}
-              keyExtractor={(item) => item.id}
+            <ScrollView
               style={styles.list}
               keyboardShouldPersistTaps="handled"
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[
-                    styles.item,
-                    item.id === selectedId && styles.itemSelected,
-                  ]}
-                  onPress={() => handleSelect(item)}
-                >
-                  <Text
-                    style={[
-                      styles.itemText,
-                      item.id === selectedId && styles.itemTextSelected,
-                    ]}
-                  >
-                    {item.name}
-                  </Text>
-                </TouchableOpacity>
-              )}
-              ListEmptyComponent={
+              nestedScrollEnabled
+            >
+              {filtered.length === 0 ? (
                 <Text style={styles.emptyText}>
                   Nenhum fornecedor encontrado.
                 </Text>
-              }
-            />
+              ) : (
+                filtered.map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[
+                      styles.item,
+                      item.id === selectedId && styles.itemSelected,
+                    ]}
+                    onPress={() => handleSelect(item)}
+                  >
+                    <Text
+                      style={[
+                        styles.itemText,
+                        item.id === selectedId && styles.itemTextSelected,
+                      ]}
+                    >
+                      {item.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
           )}
 
           <TouchableOpacity
