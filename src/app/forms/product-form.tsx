@@ -1,9 +1,10 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -13,6 +14,7 @@ import {
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import PricingCalculator from '../../components/PricingCalculator';
 import SearchableDropdown from '../../components/SearchableDropdown';
 import { Colors } from '../../constants/Colors';
@@ -30,6 +32,10 @@ export default function ProductFormScreen() {
   const [purchasePrice, setPurchasePrice] = useState(0);
   const [loading, setLoading] = useState(false);
 
+  const [cameraVisible, setCameraVisible] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
+  const cameraRef = useRef<CameraView>(null);
+
   const handlePricingChange = useCallback(
     (cost: number, _margin: number, sale: number) => {
       setPurchasePrice(cost);
@@ -38,8 +44,35 @@ export default function ProductFormScreen() {
     [],
   );
 
-  const handlePickPhoto = () => {
-    Alert.alert('Foto', 'Captura de foto será implementada com expo-camera.');
+  const handleOpenCamera = async () => {
+    if (!permission?.granted) {
+      const result = await requestPermission();
+      if (!result.granted) {
+        Alert.alert(
+          'Permissão Negada',
+          'A app precisa de acesso à câmara para tirar fotos.',
+        );
+        return;
+      }
+    }
+    setCameraVisible(true);
+  };
+
+  const handleTakePhoto = async () => {
+    if (!cameraRef.current) return;
+
+    try {
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.7,
+        skipProcessing: true,
+      });
+      if (photo) {
+        setPhotoUri(photo.uri);
+      }
+      setCameraVisible(false);
+    } catch {
+      Alert.alert('Erro', 'Não foi possível capturar a foto.');
+    }
   };
 
   const handleSave = async () => {
@@ -112,7 +145,7 @@ export default function ProductFormScreen() {
         <TouchableOpacity
           style={styles.photoButton}
           activeOpacity={0.7}
-          onPress={handlePickPhoto}
+          onPress={handleOpenCamera}
         >
           {photoUri ? (
             <Image source={{ uri: photoUri }} style={styles.photoPreview} />
@@ -158,6 +191,38 @@ export default function ProductFormScreen() {
           )}
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Camera Modal */}
+      <Modal
+        visible={cameraVisible}
+        animationType="slide"
+        onRequestClose={() => setCameraVisible(false)}
+      >
+        <View style={styles.cameraContainer}>
+          <CameraView
+            ref={cameraRef}
+            style={styles.camera}
+            facing="back"
+          />
+          <View style={styles.cameraControls}>
+            <TouchableOpacity
+              style={styles.cameraCancelButton}
+              onPress={() => setCameraVisible(false)}
+            >
+              <Text style={styles.cameraCancelText}>Cancelar</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.captureButton}
+              onPress={handleTakePhoto}
+            >
+              <View style={styles.captureButtonInner} />
+            </TouchableOpacity>
+
+            <View style={styles.cameraSpacerRight} />
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -235,5 +300,46 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  cameraContainer: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  camera: {
+    flex: 1,
+  },
+  cameraControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingVertical: 24,
+    paddingBottom: 40,
+    backgroundColor: '#000',
+  },
+  cameraCancelButton: {
+    flex: 1,
+  },
+  cameraCancelText: {
+    color: '#FFF',
+    fontSize: 16,
+  },
+  captureButton: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 4,
+    borderColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  captureButtonInner: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: '#FFF',
+  },
+  cameraSpacerRight: {
+    flex: 1,
   },
 });
