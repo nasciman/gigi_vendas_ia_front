@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import type { BarcodeScanningResult } from 'expo-camera';
 import { isAxiosError } from 'axios';
@@ -17,6 +17,7 @@ import api from '../services/api';
 
 export default function ScannerScreen() {
   const router = useRouter();
+  const { mode } = useLocalSearchParams<{ mode: 'product' | 'purchase' }>();
   const [permission, requestPermission] = useCameraPermissions();
   const [processing, setProcessing] = useState(false);
   const scannedRef = useRef(false);
@@ -33,13 +34,36 @@ export default function ScannerScreen() {
         await api.get(Endpoints.productByBarcode(barcode));
         scannedRef.current = false;
         setProcessing(false);
-        router.replace(`/forms/purchase-form?barcode=${barcode}`);
+
+        if (mode === 'purchase') {
+          router.replace(`/forms/purchase-form?barcode=${barcode}`);
+        } else {
+          router.replace(`/forms/product-form?barcode=${barcode}`);
+        }
       } catch (error) {
         scannedRef.current = false;
         setProcessing(false);
 
         if (isAxiosError(error) && error.response?.status === 404) {
-          router.replace(`/forms/product-form?barcode=${barcode}`);
+          if (mode === 'purchase') {
+            Alert.alert(
+              'Produto Não Encontrado',
+              'Este produto ainda não está cadastrado. Deseja cadastrá-lo?',
+              [
+                {
+                  text: 'Não',
+                  style: 'cancel',
+                },
+                {
+                  text: 'Sim',
+                  onPress: () =>
+                    router.replace(`/forms/product-form?barcode=${barcode}`),
+                },
+              ],
+            );
+          } else {
+            router.replace(`/forms/product-form?barcode=${barcode}`);
+          }
         } else {
           Alert.alert(
             'Erro de Conexão',
@@ -48,7 +72,7 @@ export default function ScannerScreen() {
         }
       }
     },
-    [processing, router],
+    [processing, router, mode],
   );
 
   if (!permission) {

@@ -18,12 +18,20 @@ import { Colors } from '../../constants/Colors';
 import { Endpoints } from '../../constants/Api';
 import api from '../../services/api';
 
+const API_BASE = 'http://192.168.1.100:8080';
+
 interface ProductDetail {
   barcode: string;
   name: string;
   photoPath: string | null;
   salePrice: number;
   lastPurchasePrice: number | null;
+}
+
+function resolvePhotoUrl(photoPath: string | null): string | null {
+  if (!photoPath) return null;
+  if (photoPath.startsWith('http')) return photoPath;
+  return `${API_BASE}${photoPath.startsWith('/') ? '' : '/'}${photoPath}`;
 }
 
 export default function PurchaseFormScreen() {
@@ -44,7 +52,11 @@ export default function PurchaseFormScreen() {
         const response = await api.get<ProductDetail>(
           Endpoints.productByBarcode(barcode),
         );
-        setProduct(response.data);
+        const data = response.data;
+        setProduct(data);
+        if (data.lastPurchasePrice != null && data.lastPurchasePrice > 0) {
+          setPurchasePrice(data.lastPurchasePrice);
+        }
       } catch {
         Alert.alert('Erro', 'Não foi possível carregar o produto.', [
           { text: 'Voltar', onPress: () => router.back() },
@@ -123,7 +135,7 @@ export default function PurchaseFormScreen() {
         <View style={styles.productCard}>
           {product.photoPath ? (
             <Image
-              source={{ uri: product.photoPath }}
+              source={{ uri: resolvePhotoUrl(product.photoPath) ?? '' }}
               style={styles.productPhoto}
             />
           ) : (
@@ -147,6 +159,7 @@ export default function PurchaseFormScreen() {
         <PricingCalculator
           mode="restock"
           initialSalePrice={product.salePrice}
+          initialCost={purchasePrice > 0 ? purchasePrice : undefined}
           onPricingChange={handlePricingChange}
         />
 

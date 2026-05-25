@@ -5,13 +5,20 @@ Desenvolver uma aplicação mobile em React Native utilizando o Expo.
 **Visão de Longo Prazo:** O app será um sistema de gestão completo (Login, Vendas, Funcionários).
 **Foco Atual (Fase 1):** Gestão de Catálogo e Custos (Compras).
 
-**Fluxo de UX Principal:**
-1. A app abre num **Dashboard Inicial** com botões de ação claros e grandes (ex: "Consultar/Registar Produto").
-2. Ao clicar em "Consultar", abre a Câmara. Lê o código e faz `GET /api/v1/products/{barcode}`.
-3. **Se 404 (Produto Novo) -> `product-form.tsx`:** * Campos Visuais: Foto (Botão de captura), Nome do Produto, Fornecedor (Searchable Dropdown).
-    * *UX de Precificação:* O ecrã tem 3 campos interligados visualmente (Custo, Margem % e Preço de Venda). A Margem vem por padrão a 30%. O utilizador digita o Custo e o Preço de Venda é calculado. Tudo é livremente editável.
-4. **Se 200 (Produto Existente) -> `purchase-form.tsx`:** * Campos Visuais: Foto e Nome bloqueados (apenas leitura). Fornecedor (Searchable Dropdown).
-    * *UX de Precificação:* Carrega o Preço de Venda atual. Ao digitar o novo Custo, a app **NÃO** aplica 30%, mas calcula e exibe qual é a Margem % real que sobrou. O utilizador pode alterar o Preço de Venda se desejar.
+**Arquitetura Intent-First (Intenção Primeiro):**
+O Dashboard apresenta dois botões distintos que definem a intenção do utilizador **antes** de abrir o scanner.
+
+**Fluxo A — Gerir Produtos:**
+1. Dashboard → Botão **"Produtos"** → Scanner (`mode=product`).
+2. Ao ler o código de barras, faz `GET /api/v1/products/{barcode}`.
+   - **Se 200 (Existe):** Abre `product-form.tsx` **pré-preenchido** (Nome, Preço de Venda, Foto) para **edição**.
+   - **Se 404 (Não existe):** Abre `product-form.tsx` **vazio** para **cadastro** de novo produto.
+
+**Fluxo B — Entrada de Compras:**
+1. Dashboard → Botão **"Entrada de Compras"** → Scanner (`mode=purchase`).
+2. Ao ler o código de barras, faz `GET /api/v1/products/{barcode}`.
+   - **Se 200 (Existe):** Abre `purchase-form.tsx` com Foto e Nome bloqueados, Fornecedor, e `PricingCalculator mode="restock"` carregando o `lastPurchasePrice` e o `salePrice` atual.
+   - **Se 404 (Não existe):** Exibe **Alerta**: *"Produto não encontrado. Deseja cadastrá-lo?"*. Se sim → `product-form.tsx` vazio. Se não → volta ao scanner.
 
 ## [E] Entities (Modelos de Estado Frontend)
 * **Product:** `barcode`, `name`, `photoUri`, `salePrice` (number).
@@ -48,3 +55,4 @@ Desenvolver uma aplicação mobile em React Native utilizando o Expo.
 ## [S] Safeguards (Restrições Estritas)
 * **NÃO** misture lógica de câmara ou cálculos de margem dentro do arquivo visual do formulário. Extraia para `components/`.
 * **NÃO** envie JSON no `POST /products`. Esta rota requer `multipart/form-data`.
+* **NÃO** utilize `<FlatList>` dentro de `<ScrollView>`. Causa crash no Android: *VirtualizedLists should never be nested inside plain ScrollViews*. Use `<ScrollView>` com `.map()` para listas internas.

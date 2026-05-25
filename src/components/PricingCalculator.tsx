@@ -9,6 +9,7 @@ type Mode = 'new' | 'restock';
 interface PricingCalculatorProps {
   mode: Mode;
   initialSalePrice?: number;
+  initialCost?: number;
   onPricingChange: (cost: number, margin: number, salePrice: number) => void;
 }
 
@@ -17,18 +18,31 @@ const DEFAULT_MARGIN = 30;
 export default function PricingCalculator({
   mode,
   initialSalePrice = 0,
+  initialCost = 0,
   onPricingChange,
 }: PricingCalculatorProps) {
-  const [costText, setCostText] = useState('');
-  const [marginText, setMarginText] = useState(
-    mode === 'new' ? String(DEFAULT_MARGIN) : '',
+  const [costText, setCostText] = useState(
+    initialCost > 0 ? formatCurrency(initialCost) : '',
   );
+  const [marginText, setMarginText] = useState(() => {
+    if (mode === 'new') return String(DEFAULT_MARGIN);
+    if (initialCost > 0 && initialSalePrice > 0) {
+      return calculateMargin(initialCost, initialSalePrice).toFixed(1);
+    }
+    return '';
+  });
   const [salePriceText, setSalePriceText] = useState(
     initialSalePrice > 0 ? formatCurrency(initialSalePrice) : '',
   );
 
-  const [cost, setCost] = useState(0);
-  const [margin, setMargin] = useState(mode === 'new' ? DEFAULT_MARGIN : 0);
+  const [cost, setCost] = useState(initialCost);
+  const [margin, setMargin] = useState(() => {
+    if (mode === 'new') return DEFAULT_MARGIN;
+    if (initialCost > 0 && initialSalePrice > 0) {
+      return calculateMargin(initialCost, initialSalePrice);
+    }
+    return 0;
+  });
   const [salePrice, setSalePrice] = useState(initialSalePrice);
 
   useEffect(() => {
