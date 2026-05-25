@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import PricingCalculator from '../../components/PricingCalculator';
+import SearchableDropdown from '../../components/SearchableDropdown';
 import { Colors } from '../../constants/Colors';
 import { Endpoints } from '../../constants/Api';
 import api from '../../services/api';
@@ -24,6 +25,7 @@ export default function ProductFormScreen() {
 
   const [name, setName] = useState('');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [supplierId, setSupplierId] = useState<string | null>(null);
   const [salePrice, setSalePrice] = useState(0);
   const [purchasePrice, setPurchasePrice] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -43,6 +45,10 @@ export default function ProductFormScreen() {
   const handleSave = async () => {
     if (!name.trim()) {
       Alert.alert('Campo obrigatório', 'Informe o nome do produto.');
+      return;
+    }
+    if (!supplierId) {
+      Alert.alert('Campo obrigatório', 'Selecione um fornecedor.');
       return;
     }
     if (salePrice <= 0) {
@@ -73,7 +79,7 @@ export default function ProductFormScreen() {
       if (purchasePrice > 0) {
         await api.post(Endpoints.purchases, {
           productId: barcode,
-          supplierId: null,
+          supplierId,
           purchasePrice,
           purchaseDate: new Date().toISOString(),
         });
@@ -82,7 +88,7 @@ export default function ProductFormScreen() {
       Alert.alert('Sucesso', 'Produto registado com sucesso!', [
         { text: 'OK', onPress: () => router.back() },
       ]);
-    } catch (error) {
+    } catch {
       Alert.alert('Erro', 'Não foi possível salvar o produto. Tente novamente.');
     } finally {
       setLoading(false);
@@ -127,6 +133,12 @@ export default function ProductFormScreen() {
           placeholder="Ex: Arroz Integral 1kg"
           placeholderTextColor={Colors.textMuted}
           autoCapitalize="words"
+        />
+
+        {/* Supplier */}
+        <SearchableDropdown
+          selectedId={supplierId}
+          onSelect={(supplier) => setSupplierId(supplier.id)}
         />
 
         {/* Pricing Calculator */}
