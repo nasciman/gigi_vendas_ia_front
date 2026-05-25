@@ -31,24 +31,19 @@ export default function ScannerScreen() {
 
       try {
         await api.get(Endpoints.productByBarcode(barcode));
+        scannedRef.current = false;
+        setProcessing(false);
         router.replace(`/forms/purchase-form?barcode=${barcode}`);
       } catch (error) {
+        scannedRef.current = false;
+        setProcessing(false);
+
         if (isAxiosError(error) && error.response?.status === 404) {
           router.replace(`/forms/product-form?barcode=${barcode}`);
         } else {
           Alert.alert(
             'Erro de Conexão',
             'Não foi possível consultar o produto. Verifique a ligação ao servidor.',
-            [
-              {
-                text: 'Tentar Novamente',
-                onPress: () => {
-                  scannedRef.current = false;
-                  setProcessing(false);
-                },
-              },
-              { text: 'Voltar', onPress: () => router.back() },
-            ],
           );
         }
       }
