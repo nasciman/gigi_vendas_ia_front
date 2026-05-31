@@ -16,26 +16,11 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import PricingCalculator from '../../components/PricingCalculator';
-import SearchableDropdown from '../../components/SearchableDropdown';
 import { Colors } from '../../constants/Colors';
 import { Endpoints } from '../../constants/Api';
 import api from '../../services/api';
-
-const API_BASE = 'http://192.168.1.100:8080';
-
-interface ProductDetail {
-  barcode: string;
-  name: string;
-  photoPath: string | null;
-  salePrice: number;
-  lastPurchasePrice: number | null;
-}
-
-function resolvePhotoUrl(photoPath: string | null): string | null {
-  if (!photoPath) return null;
-  if (photoPath.startsWith('http')) return photoPath;
-  return `${API_BASE}${photoPath.startsWith('/') ? '' : '/'}${photoPath}`;
-}
+import { resolvePhotoUrl } from '../../utils/image';
+import type { ProductDetail } from '../../types/product';
 
 export default function ProductFormScreen() {
   const router = useRouter();
@@ -43,9 +28,8 @@ export default function ProductFormScreen() {
 
   const [name, setName] = useState('');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
-  const [supplierId, setSupplierId] = useState<string | null>(null);
   const [salePrice, setSalePrice] = useState(0);
-  const [purchasePrice, setPurchasePrice] = useState(0);
+  const [lastCost, setLastCost] = useState(0);
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [loadingProduct, setLoadingProduct] = useState(true);
@@ -69,6 +53,7 @@ export default function ProductFormScreen() {
         setName(product.name);
         setSalePrice(product.salePrice);
         setPhotoUri(resolvePhotoUrl(product.photoPath));
+        setLastCost(product.lastPurchasePrice ?? 0);
         setIsEditing(true);
       } catch {
         // 404 or error — product doesn't exist, keep form empty for new registration
@@ -81,8 +66,7 @@ export default function ProductFormScreen() {
   }, [barcode]);
 
   const handlePricingChange = useCallback(
-    (cost: number, _margin: number, sale: number) => {
-      setPurchasePrice(cost);
+    (_cost: number, _margin: number, sale: number) => {
       setSalePrice(sale);
     },
     [],
@@ -124,10 +108,6 @@ export default function ProductFormScreen() {
       Alert.alert('Campo obrigatório', 'Informe o nome do produto.');
       return;
     }
-    if (!supplierId) {
-      Alert.alert('Campo obrigatório', 'Selecione um fornecedor.');
-      return;
-    }
     if (salePrice <= 0) {
       Alert.alert('Campo obrigatório', 'Informe o preço de venda.');
       return;
@@ -153,18 +133,13 @@ export default function ProductFormScreen() {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      if (purchasePrice > 0) {
-        await api.post(Endpoints.purchases, {
-          productId: barcode,
-          supplierId,
-          purchasePrice,
-          purchaseDate: new Date().toISOString(),
-        });
-      }
-
-      Alert.alert('Sucesso', 'Produto registado com sucesso!', [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
+      Alert.alert(
+        'Sucesso',
+        isEditing
+          ? 'Produto atualizado com sucesso!'
+          : 'Produto registado com sucesso!',
+        [{ text: 'OK', onPress: () => router.back() }],
+      );
     } catch {
       Alert.alert('Erro', 'Não foi possível salvar o produto. Tente novamente.');
     } finally {
@@ -221,18 +196,19 @@ export default function ProductFormScreen() {
           autoCapitalize="words"
         />
 
-        {/* Supplier */}
-        <SearchableDropdown
-          selectedId={supplierId}
-          onSelect={(supplier) => setSupplierId(supplier.id)}
-        />
-
-        {/* Pricing Calculator */}
+        {/* Pricing Calculator — cost is read-only (master data) */}
         <PricingCalculator
-          mode="new"
-          initialSalePrice={isEditing ? salePrice : undefined}
+          mode="restock"
+          costEditable={false}
+          initialCost={lastCost > 0 ? lastCost : undefined}
+          initialSalePrice={salePrice > 0 ? salePrice : undefined}
           onPricingChange={handlePricingChange}
         />
+        <Text style={styles.helperText}>
+          {lastCost > 0
+            ? 'O custo é apenas leitura. Altere a margem para recalcular o preço de venda.'
+            : 'Sem custo registado. Informe o preço de venda diretamente (a margem fica bloqueada até existir uma entrada de compra).'}
+        </Text>
 
         {/* Save Button */}
         <TouchableOpacity
@@ -244,7 +220,9 @@ export default function ProductFormScreen() {
           {loading ? (
             <ActivityIndicator color="#FFF" />
           ) : (
-            <Text style={styles.saveButtonText}>Salvar Produto</Text>
+            <Text style={styles.saveButtonText}>
+              {isEditing ? 'Atualizar Produto' : 'Salvar Produto'}
+            </Text>
           )}
         </TouchableOpacity>
       </ScrollView>
@@ -353,6 +331,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: Colors.textPrimary,
     marginBottom: 16,
+  },
+  helperText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 8,
   },
   saveButton: {
     marginTop: 28,

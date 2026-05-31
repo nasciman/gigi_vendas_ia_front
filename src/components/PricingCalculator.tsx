@@ -10,6 +10,7 @@ interface PricingCalculatorProps {
   mode: Mode;
   initialSalePrice?: number;
   initialCost?: number;
+  costEditable?: boolean;
   onPricingChange: (cost: number, margin: number, salePrice: number) => void;
 }
 
@@ -19,6 +20,7 @@ export default function PricingCalculator({
   mode,
   initialSalePrice = 0,
   initialCost = 0,
+  costEditable = true,
   onPricingChange,
 }: PricingCalculatorProps) {
   const [costText, setCostText] = useState(
@@ -111,12 +113,13 @@ export default function PricingCalculator({
         <View style={styles.field}>
           <Text style={styles.label}>Custo (R$)</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, !costEditable && styles.inputDisabled]}
             value={costText}
             onChangeText={handleCostChange}
             placeholder="0,00"
             placeholderTextColor={Colors.textMuted}
             keyboardType="numeric"
+            editable={costEditable}
           />
         </View>
 
@@ -126,12 +129,14 @@ export default function PricingCalculator({
             style={[
               styles.input,
               mode === 'restock' && cost > 0 && styles.inputHighlight,
+              cost <= 0 && styles.inputDisabled,
             ]}
             value={marginText}
             onChangeText={handleMarginChange}
-            placeholder="30"
+            placeholder={cost > 0 ? '30' : '—'}
             placeholderTextColor={Colors.textMuted}
             keyboardType="numeric"
+            editable={cost > 0}
           />
         </View>
 
@@ -189,5 +194,9 @@ const styles = StyleSheet.create({
   inputHighlight: {
     borderColor: Colors.accent,
     backgroundColor: '#F0F7FF',
+  },
+  inputDisabled: {
+    backgroundColor: Colors.background,
+    color: Colors.textMuted,
   },
 });

@@ -17,7 +17,7 @@ import api from '../services/api';
 
 export default function ScannerScreen() {
   const router = useRouter();
-  const { mode } = useLocalSearchParams<{ mode: 'product' | 'purchase' }>();
+  const { mode } = useLocalSearchParams<{ mode: 'consult' | 'purchase' }>();
   const [permission, requestPermission] = useCameraPermissions();
   const [processing, setProcessing] = useState(false);
   const scannedRef = useRef(false);
@@ -30,6 +30,24 @@ export default function ScannerScreen() {
 
       const barcode = result.data;
 
+      const promptRegister = () => {
+        Alert.alert(
+          'Produto Não Encontrado',
+          'Este produto ainda não está cadastrado. Deseja cadastrá-lo?',
+          [
+            {
+              text: 'Não',
+              style: 'cancel',
+            },
+            {
+              text: 'Sim',
+              onPress: () =>
+                router.replace(`/forms/product-form?barcode=${barcode}`),
+            },
+          ],
+        );
+      };
+
       try {
         await api.get(Endpoints.productByBarcode(barcode));
         scannedRef.current = false;
@@ -38,32 +56,14 @@ export default function ScannerScreen() {
         if (mode === 'purchase') {
           router.replace(`/forms/purchase-form?barcode=${barcode}`);
         } else {
-          router.replace(`/forms/product-form?barcode=${barcode}`);
+          router.replace(`/product-details?barcode=${barcode}`);
         }
       } catch (error) {
         scannedRef.current = false;
         setProcessing(false);
 
         if (isAxiosError(error) && error.response?.status === 404) {
-          if (mode === 'purchase') {
-            Alert.alert(
-              'Produto Não Encontrado',
-              'Este produto ainda não está cadastrado. Deseja cadastrá-lo?',
-              [
-                {
-                  text: 'Não',
-                  style: 'cancel',
-                },
-                {
-                  text: 'Sim',
-                  onPress: () =>
-                    router.replace(`/forms/product-form?barcode=${barcode}`),
-                },
-              ],
-            );
-          } else {
-            router.replace(`/forms/product-form?barcode=${barcode}`);
-          }
+          promptRegister();
         } else {
           Alert.alert(
             'Erro de Conexão',

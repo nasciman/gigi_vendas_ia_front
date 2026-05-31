@@ -16,12 +16,12 @@ export default function DashboardScreen() {
         <TouchableOpacity
           style={styles.actionButton}
           activeOpacity={0.7}
-          onPress={() => router.push('/scanner?mode=product')}
+          onPress={() => router.push('/scanner?mode=consult')}
         >
-          <Text style={styles.actionIcon}>📦</Text>
-          <Text style={styles.actionText}>Produtos</Text>
+          <Text style={styles.actionIcon}>🔍</Text>
+          <Text style={styles.actionText}>Consultar Produto</Text>
           <Text style={styles.actionHint}>
-            Cadastrar novo ou editar produto existente
+            Ver detalhes, preço, custo e margem do produto
           </Text>
         </TouchableOpacity>
 
@@ -31,9 +31,9 @@ export default function DashboardScreen() {
           onPress={() => router.push('/scanner?mode=purchase')}
         >
           <Text style={styles.actionIcon}>🛒</Text>
-          <Text style={styles.actionText}>Entrada de Compras</Text>
+          <Text style={styles.actionText}>Registar Entrada</Text>
           <Text style={styles.actionHint}>
-            Registar nova compra de produto existente
+            Registar nova entrada de compra (custo e fornecedor)
           </Text>
         </TouchableOpacity>
       </View>
