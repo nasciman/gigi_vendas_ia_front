@@ -6,19 +6,39 @@ Desenvolver uma aplicação mobile em React Native utilizando o Expo.
 **Foco Atual (Fase 1):** Gestão de Catálogo e Custos (Compras).
 
 **Arquitetura Intent-First (Intenção Primeiro):**
-O Dashboard apresenta dois botões distintos que definem a intenção do utilizador **antes** de abrir o scanner.
+Separação clara entre **Dados Mestres** (Produto: nome, foto, preço) e **Dados Transacionais** (Compras: custo, fornecedor, data). O Dashboard apresenta dois botões que definem a intenção do utilizador **antes** de abrir o scanner.
 
-**Fluxo A — Gerir Produtos:**
-1. Dashboard → Botão **"Produtos"** → Scanner (`mode=product`).
-2. Ao ler o código de barras, faz `GET /api/v1/products/{barcode}`.
-   - **Se 200 (Existe):** Abre `product-form.tsx` **pré-preenchido** (Nome, Preço de Venda, Foto) para **edição**.
-   - **Se 404 (Não existe):** Abre `product-form.tsx` **vazio** para **cadastro** de novo produto.
+**Dashboard:**
+- Botão **"Consultar Produto"** → Scanner (`mode=consult`).
+- Botão **"Registar Entrada"** → Scanner (`mode=purchase`).
 
-**Fluxo B — Entrada de Compras:**
-1. Dashboard → Botão **"Entrada de Compras"** → Scanner (`mode=purchase`).
-2. Ao ler o código de barras, faz `GET /api/v1/products/{barcode}`.
-   - **Se 200 (Existe):** Abre `purchase-form.tsx` com Foto e Nome bloqueados, Fornecedor, e `PricingCalculator mode="restock"` carregando o `lastPurchasePrice` e o `salePrice` atual.
+**Fluxo A — Consultar Produto (`mode=consult`):**
+1. Dashboard → **"Consultar Produto"** → Scanner. Ao ler, faz `GET /api/v1/products/{barcode}`.
+   - **Se 200 (Existe):** Abre `product-details.tsx` (tela de **leitura**).
    - **Se 404 (Não existe):** Exibe **Alerta**: *"Produto não encontrado. Deseja cadastrá-lo?"*. Se sim → `product-form.tsx` vazio. Se não → volta ao scanner.
+
+**`product-details.tsx` (Tela de Consulta — só leitura):**
+- Mostra: Foto (via `resolvePhotoUrl`), Nome, Preço de Venda, Último Custo, Último Fornecedor e Margem atual.
+- Botões de ação:
+  - **Editar** → `product-form.tsx` (edição de Dados Mestres).
+  - **Registar Entrada** → `purchase-form.tsx` (entrada transacional de compra).
+
+**Fluxo B — Registar Entrada (`mode=purchase`):**
+1. Dashboard → **"Registar Entrada"** → Scanner. Ao ler, faz `GET /api/v1/products/{barcode}`.
+   - **Se 200 (Existe):** Abre `purchase-form.tsx`.
+   - **Se 404 (Não existe):** Exibe **Alerta**: *"Produto não encontrado. Deseja cadastrá-lo?"*. Se sim → `product-form.tsx` vazio. Se não → volta ao scanner.
+
+**`product-form.tsx` (Dados Mestres — Cadastro/Edição):**
+- Edita apenas **Nome, Foto e Preço de Venda**.
+- O **Custo antigo** (`lastPurchasePrice`) é exibido apenas como **leitura**.
+- O utilizador pode alterar a **Margem** (se houver custo) para recalcular o Preço de Venda. **Se não houver custo, a Margem fica bloqueada** (só edição direta do Preço de Venda).
+- A foto é resolvida via `resolvePhotoUrl`.
+
+**`purchase-form.tsx` (Dados Transacionais — Entrada de Compra):**
+- Foco transacional: Foto e Nome bloqueados (leitura, via `resolvePhotoUrl`).
+- Seleciona **Fornecedor** via `SearchableDropdown` (usa `<ScrollView>`, nunca `<FlatList>`).
+- Insere o **novo Custo** e inclui o `PricingCalculator mode="restock"` para reajuste imediato do Preço de Venda.
+- Dispara `POST /api/v1/purchases`.
 
 ## [E] Entities (Modelos de Estado Frontend)
 * **Product:** `barcode`, `name`, `photoUri`, `salePrice` (number).
@@ -37,6 +57,7 @@ O Dashboard apresenta dois botões distintos que definem a intenção do utiliza
     │   ├── _layout.tsx    
     │   ├── index.tsx      
     │   ├── scanner.tsx    
+    │   ├── product-details.tsx  (tela de consulta — só leitura)
     │   └── forms/         (product-form.tsx, purchase-form.tsx)
     ├── components/        (SearchableDropdown, PricingCalculator, ImagePickerButton)
     ├── services/          (api.ts)
