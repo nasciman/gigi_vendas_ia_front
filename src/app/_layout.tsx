@@ -22,8 +22,12 @@ export default function RootLayout() {
           options={{ title: 'Scanner', presentation: 'fullScreenModal' }}
         />
         <Stack.Screen
+          name="product-details"
+          options={{ title: 'Detalhes do Produto' }}
+        />
+        <Stack.Screen
           name="forms/product-form"
-          options={{ title: 'Novo Produto' }}
+          options={{ title: 'Produto' }}
         />
         <Stack.Screen
           name="forms/purchase-form"
