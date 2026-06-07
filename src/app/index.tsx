@@ -1,4 +1,4 @@
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -8,6 +8,11 @@ export default function DashboardScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
+        <Image
+          source={require('../../assets/images/logo.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
         <Text style={styles.title}>Gigi Vendas</Text>
         <Text style={styles.subtitle}>Gestão de Catálogo e Compras</Text>
       </View>
@@ -53,6 +58,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#1A1A2E',
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
+    alignItems: 'center',
+  },
+  logo: {
+    width: 96,
+    height: 96,
+    marginBottom: 12,
   },
   title: {
     fontSize: 28,
